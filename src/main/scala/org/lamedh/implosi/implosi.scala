@@ -4,7 +4,9 @@ package lamedh
 /**
  * Represents standard scala(ble) library, but in implosive way, hence implosa
 **/
-package object implosa {
+package object implosi {
+
+import scala.util.control.NonFatal
 
   /**
    * On or No? Mimicking Option[A] from stdlib
@@ -19,20 +21,20 @@ package object implosa {
 
   object list {
 
-    abstract class Cats[+A]
-    final case object Nil                            extends Cats[Nothing]
-    final case class Cons[A](head: A, tail: Cats[A]) extends Cats[A]
+    abstract class As[+A]
+    final case object Nil                          extends As[Nothing]
+    final case class Cons[A](head: A, tail: As[A]) extends As[A]
 
-    def prepend[A](a: A, as: Cats[A]): Cats[A] = Cons(a, as)
+    def prepend[A](a: A, as: As[A]): As[A] = Cons(a, as)
 
-    def reverse[A](list: Cats[A], acc: Cats[A] = Nil): Cats[A] =
+    def reverse[A](list: As[A], acc: As[A] = Nil): As[A] =
       list match {
         case Nil         => acc
         case Cons(a, as) => reverse(as, prepend(a, acc))
       }
 
-    def union[A](as1: Cats[A], as2: Cats[A]) = {
-      def unionRec(sa1: Cats[A], acc: Cats[A]): Cats[A] = sa1 match {
+    def union[A](as1: As[A], as2: As[A]) = {
+      def unionRec(sa1: As[A], acc: As[A]): As[A] = sa1 match {
         case Nil         => acc
         case Cons(a, sa) => unionRec(sa, prepend(a, acc))
       }
@@ -50,4 +52,9 @@ package object implosa {
   abstract class Oko[A, B]
   final case class Ko[A, B](a: A) extends Oko[A, B]
   final case class Ok[A, B](b: B) extends Oko[A, B]
+
+  object Oko {
+    def doTry[A](a: => A): Oko[Throwable, A] =
+      try { Ok(a) } catch { case NonFatal(err) => Ko(err) }
+  }
 }

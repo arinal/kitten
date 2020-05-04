@@ -3,9 +3,10 @@ package lamedh
 package kitten
 package core
 
-import implosa._
-import implosa.list._
-import categories._
+import implosi._
+import implosi.list._
+import reducers._
+import mappers._
 
 package object instances {
 
@@ -21,8 +22,8 @@ package object instances {
         }
     }
 
-    implicit val listFunctor = new Functor[List] {
-      override def map[A, B](fa: List[A])(f: A => B): List[B] =
+    implicit val listFunctor = new Functor[As] {
+      override def map[A, B](fa: As[A])(f: A => B): As[B] =
         fa match {
           case Cons(h, t) => Cons(f(h), map(t)(f))
           case Nil        => Nil
@@ -34,7 +35,7 @@ package object instances {
 
     import functors._
 
-    implicit object MaybeApply extends Apply[Ono] {
+    implicit val onoApply = new Apply[Ono] {
       override def map[A, B](fa: Ono[A])(f: A => B): Ono[B] = maybeFunctor.map(fa)(f)
       override def ap[A, B](fab: Ono[A => B])(fa: Ono[A]): Ono[B] =
         fab match {
@@ -43,9 +44,9 @@ package object instances {
         }
     }
 
-    implicit val list = new Apply[List] {
-      override def map[A, B](fa: List[A])(f: A => B): List[B] = listFunctor.map(fa)(f)
-      override def ap[A, B](fab: List[A => B])(fa: List[A]): List[B] =
+    implicit val as = new Apply[As] {
+      override def map[A, B](fa: As[A])(f: A => B): As[B] = listFunctor.map(fa)(f)
+      override def ap[A, B](fab: As[A => B])(fa: As[A]): As[B] =
         fab match {
           case Nil         => Nil
           case Cons(f, fs) => union(map(fa)(f), ap(fs)(fa))
@@ -70,8 +71,9 @@ package object instances {
         (fab, fa) match {
           case (Ok(f), Ok(a))       => Ok(f(a))
           case (Ko(err1), Ko(err2)) => Ko(err1 + err2)
-          case (Ok(_), Ko(err))         => Ko(err)
-          case (Ko(err), Ok(_))         => Ko(err)
+          case (Ok(_), Ko(err))     => Ko(err)
+          case (Ko(err), Ok(_))     => Ko(err)
+          case _                    => ??? // not sure when this will happen
         }
     }
   }

@@ -102,8 +102,8 @@ package object mappers {
       ap(map(fab)(ab => (c: C) => (ab._1, ab._2, c)))(fc)
     }
 
-    def map[A, B, Z](fa: F[A], fb: F[B])(f: (A, B) => Z): F[Z]                 = map(product(fa, fb))(f.tupled)
-    def map[A, B, C, Z](fa: F[A], fb: F[B], fc: F[C])(f: (A, B, C) => Z): F[Z] = map(product(fa, fb, fc))(f.tupled)
+    def mapN[A, B, Z](fa: F[A], fb: F[B])(f: (A, B) => Z): F[Z]                 = map(product(fa, fb))(f.tupled)
+    def mapN[A, B, C, Z](fa: F[A], fb: F[B], fc: F[C])(f: (A, B, C) => Z): F[Z] = map(product(fa, fb, fc))(f.tupled)
   }
 
   trait Applicative[F[_]] extends Apply[F] {
@@ -111,7 +111,7 @@ package object mappers {
   }
 
   /**
-   * The star of this show, **drumrolls** `Monad`
+   * The star of this show, we present you, the one and only **drumrolls** `Monad`
   **/
   trait Monad[F[_]] extends Applicative[F] {
     def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
@@ -122,11 +122,9 @@ package object mappers {
   }
 
   trait Traverse[F[_]] extends Functor[F] {
-
     def traverse[G[_], A, B](fa: F[A])(f: A => G[B]): G[F[B]]
 
-    def sequence[G[_], A](fga: F[G[A]]): G[F[A]] = traverse(fga)(identity)
-
+    def sequence[G[_], A](fga: F[G[A]]): G[F[A]]      = traverse(fga)(identity)
     override def map[A, B](fa: F[A])(f: A => B): F[B] = traverse[kernel.Id, A, B](fa)(f)
   }
 
