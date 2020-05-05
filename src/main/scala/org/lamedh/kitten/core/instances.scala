@@ -1,12 +1,11 @@
 package org
 package lamedh
 package kitten
-package core
 
 import implosi._
 import implosi.list._
-import reducers._
-import mappers._
+import categories.reducers._
+import categories.mappers._
 
 package object instances {
 
@@ -71,15 +70,17 @@ package object instances {
         (fab, fa) match {
           case (Ok(f), Ok(a))       => Ok(f(a))
           case (Ko(err1), Ko(err2)) => Ko(err1 + err2)
-          case (Ok(_), Ko(err))     => Ko(err)
-          case (Ko(err), Ok(_))     => Ko(err)
-          case _                    => ??? // not sure when this will happen
+          case (_, Ko(err))         => Ko(err)
+          case (Ko(err), _)         => Ko(err)
+          case _                    => ??? // unreachable
         }
     }
   }
 
   object monads {
 
+    import org.lamedh.implosi.concurrent.Yet
+    import org.lamedh.implosi.concurrent.YetNot
     import functors._
 
     implicit val onoMonad = new Monad[Ono] {
@@ -98,6 +99,18 @@ package object instances {
           case Ko(s) => Ko(s)
           case Ok(a) => f(a)
         }
+    }
+
+    implicit val yetNotMonad = new Monad[YetNot] {
+      override def pure[A](a: A): YetNot[A] = new Yet(a)
+      override def flatMap[A, B](fa: YetNot[A])(f: A => YetNot[B]): YetNot[B] = {
+        fa.map { a =>
+          f(a).fetch() match {
+            case Ok(a)   => a
+            case Ko(err) => throw err
+          }
+        }
+      }
     }
   }
 }

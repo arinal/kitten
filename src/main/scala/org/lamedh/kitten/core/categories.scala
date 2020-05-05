@@ -1,7 +1,7 @@
 package org
 package lamedh
 package kitten
-package core
+package categories
 
 package object kernel {
   type Id[A] = A
@@ -74,7 +74,7 @@ package object mappers {
   }
 
   /**
-   * Full named as contravariant functor, unfortunatelly the name 'functor' always refers
+   * Has a full name of ,ontravariant functor. Unfortunatelly the name 'functor' always refers
    * to its sibling, covariant functor.
    * Apparently `contramap` has a weird signature and doesn't go well in the market.
   **/
@@ -84,13 +84,20 @@ package object mappers {
   }
 
   /**
-   * Functor is a famous nick-name compared to its less fortunate technical name, covariant functor.
+   * Has a real name of Covariant Functor, but people forget its first name
   **/
   trait Functor[F[_]] extends Invariant[F] {
     def map[A, B](fa: F[A])(f: A => B): F[B]
     def imap[A, B](fa: F[A])(f: A => B, g: B => A): F[B] = map(fa)(f)
   }
 
+  /**
+   * [[Apply]] combines one or more effects together.
+   * {{{
+   * Apply[OkoString].product(Ok(1), Ok(2), Ok(3)) // Ok((1, 2, 3))
+   * Apply[OkoString].product(Ok(1), Ko("a"), Ko("b")) // Ko("ab")
+   * }}}
+  **/
   trait Apply[F[_]] extends Functor[F] {
     def ap[A, B](fab: F[A => B])(fa: F[A]): F[B]
 
@@ -111,7 +118,7 @@ package object mappers {
   }
 
   /**
-   * The star of this show, we present you, the one and only **drumrolls** `Monad`
+   * The star of this show, we present you the one and only.. **drumrolls** `Monad`
   **/
   trait Monad[F[_]] extends Applicative[F] {
     def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
