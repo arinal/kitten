@@ -11,6 +11,34 @@ package object instances {
 
   type OkoString[A] = Oko[String, A]
 
+  object reducers {
+
+    import functors._
+
+    implicit val stringMonoid = new Monoid[String] {
+      override def add(a1: String, a2: String): String = a1 + a2
+      override def empty: String                       = ""
+    }
+
+    implicit val intGroup = new Group[Int] {
+      override def add(a1: Int, a2: Int): Int = a1 + a2
+      override def inverse(a: Int): Int       = -a
+      override def empty: Int                 = 0
+    }
+
+    implicit val listFoldable = new Foldable[As] {
+
+      override def foldLeft[A, B](fa: As[A], init: B)(f: (A, B) => B): B =
+        fa match {
+          case Cons(a, as) => foldLeft(as, f(a, init))(f)
+          case Nil         => init
+        }
+
+      override def foldRight[A, B](fa: As[A], init: B)(f: (A, B) => B): B =
+        foldLeft(reverse(fa), init)(f)
+    }
+  }
+
   object functors {
 
     implicit val maybeFunctor = new Functor[Ono] {
@@ -21,7 +49,7 @@ package object instances {
         }
     }
 
-    implicit val listFunctor = new Functor[As] {
+    implicit lazy val listFunctor = new Functor[As] {
       override def map[A, B](fa: As[A])(f: A => B): As[B] =
         fa match {
           case Cons(h, t) => Cons(f(h), map(t)(f))

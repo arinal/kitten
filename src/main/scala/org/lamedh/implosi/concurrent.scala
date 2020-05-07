@@ -8,7 +8,7 @@ object concurrent {
   import implosi._
 
   /**
-   * Yet or not yet? represents [[Future]] from stdlib
+   * Yet or not yet? represents [[scala.concurrent.Future]] from stdlib
    * Example:
    * {{{
    * val notyet = NotYet { Thread.sleep(1000); 5 }
