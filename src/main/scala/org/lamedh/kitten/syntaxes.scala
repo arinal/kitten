@@ -2,7 +2,6 @@ package org.lamedh
 package kitten
 
 package object syntaxes {
-  import scale.list._
   import categories.reducers._
   import categories.mappers._
   import instances._

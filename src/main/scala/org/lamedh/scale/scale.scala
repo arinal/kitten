@@ -19,11 +19,14 @@ package object scale {
   final case class Som[A](a: A) extends Opt[A]
   final case object Non         extends Opt[Nothing]
 
-  object list {
+  abstract class Lis[+A]
+  final case object Nil                           extends Lis[Nothing]
+  final case class Cons[A](head: A, tail: Lis[A]) extends Lis[A]
 
-    abstract class Lis[+A]
-    final case object Nil                           extends Lis[Nothing]
-    final case class Cons[A](head: A, tail: Lis[A]) extends Lis[A]
+  object Lis {
+
+    def apply[A](args: A*): Lis[A] =
+      args.foldRight(Nil: Lis[A])((a, as) => Cons(a, as))
 
     def prepend[A](a: A, as: Lis[A]): Lis[A] = Cons(a, as)
 

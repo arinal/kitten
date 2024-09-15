@@ -1,7 +1,9 @@
-package org.lamedh.kitten.categories
+package org.lamedh.kitten
+package categories
 
 package object kernel {
   type Id[A] = A
+  def id[A](a: A): Id[A] = a
 }
 
 /**
@@ -58,10 +60,10 @@ package object reducers {
     def fold[A: Monoid](fa: F[A]) = foldMap(fa)(identity)
   }
 
-  object Semigroup { def apply[A: Semigroup]   = implicitly[Semigroup[A]] }
-  object Monoid    { def apply[A: Monoid]      = implicitly[Monoid[A]]    }
-  object Group     { def apply[A: Group]       = implicitly[Group[A]]     }
-  object Foldable  { def apply[F[_]: Foldable] = implicitly[Foldable[F]]  }
+  object Semigroup { def apply[A: Semigroup] = implicitly[Semigroup[A]]  }
+  object Monoid    { def apply[A: Monoid] = implicitly[Monoid[A]]        }
+  object Group     { def apply[A: Group] = implicitly[Group[A]]          }
+  object Foldable  { def apply[F[_]: Foldable] = implicitly[Foldable[F]] }
 }
 
 package object mappers {
@@ -87,6 +89,9 @@ package object mappers {
   trait Functor[F[_]] extends Invariant[F] {
     def map[A, B](fa: F[A])(f: A => B): F[B]
     def imap[A, B](fa: F[A])(f: A => B, g: B => A): F[B] = map(fa)(f)
+
+    def lift[A, B](f: A => B)(implicit F: Functor[F]): F[A] => F[B] =
+      fa => F.map(fa)(f)
   }
 
   /**
@@ -107,8 +112,10 @@ package object mappers {
       ap(map(fab)(ab => (c: C) => (ab._1, ab._2, c)))(fc)
     }
 
-    def mapN[A, B, Z](fa: F[A], fb: F[B])(f: (A, B) => Z): F[Z]                 = map(product(fa, fb))(f.tupled)
-    def mapN[A, B, C, Z](fa: F[A], fb: F[B], fc: F[C])(f: (A, B, C) => Z): F[Z] = map(product(fa, fb, fc))(f.tupled)
+    def mapN[A, B, Z](fa: F[A], fb: F[B])(f: (A, B) => Z): F[Z] =
+      map(product(fa, fb))(f.tupled)
+    def mapN[A, B, C, Z](fa: F[A], fb: F[B], fc: F[C])(
+        f: (A, B, C) => Z): F[Z] = map(product(fa, fb, fc))(f.tupled)
   }
 
   trait Applicative[F[_]] extends Apply[F] {
@@ -122,19 +129,28 @@ package object mappers {
     def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
 
     // Monad is unfriendly and greedy, it overwrites everything in flatMap
-    override def ap[A, B](ff: F[A => B])(fa: F[A]): F[B] = flatMap(ff)(f => map(fa)(f))
-    override def map[A, B](fa: F[A])(f: A => B): F[B]    = flatMap(fa)(a => pure(f(a)))
+    override def ap[A, B](ff: F[A => B])(fa: F[A]): F[B] =
+      flatMap(ff)(f => map(fa)(f))
+    override def map[A, B](fa: F[A])(f: A => B): F[B] =
+      flatMap(fa)(a => pure(f(a)))
   }
 
   trait Traverse[F[_]] extends Functor[F] {
-    def traverse[G[_], A, B](fa: F[A])(f: A => G[B]): G[F[B]]
+    def traverse[G[_]: Applicative, A, B](fa: F[A])(f: A => G[B]): G[F[B]]
 
-    def sequence[G[_], A](fga: F[G[A]]): G[F[A]]      = traverse(fga)(identity)
-    override def map[A, B](fa: F[A])(f: A => B): F[B] = traverse[kernel.Id, A, B](fa)(f)
+    def sequence[G[_]: Applicative, A](fga: F[G[A]]): G[F[A]] = traverse(fga)(identity)
+
+    override def map[A, B](fa: F[kernel.Id[A]])(f: A => B): F[B] = {
+      import instances.applicatives.idApplicative
+      traverse(fa)(a => kernel.id(f(a)))
+    }
   }
 
-  object Functor     { def apply[F[_]: Functor]     = implicitly[Functor[F]]     }
-  object Apply       { def apply[F[_]: Apply]       = implicitly[Apply[F]]       }
-  object Applicative { def apply[F[_]: Applicative] = implicitly[Applicative[F]] }
-  object Monad       { def apply[F[_]: Monad]       = implicitly[Monad[F]]       }
+  object Functor { def apply[F[_]: Functor] = implicitly[Functor[F]] }
+  object Apply   { def apply[F[_]: Apply] = implicitly[Apply[F]]     }
+  object Applicative {
+    def apply[F[_]: Applicative] = implicitly[Applicative[F]]
+  }
+  object Monad    { def apply[F[_]: Monad] = implicitly[Monad[F]]       }
+  object Traverse { def apply[F[_]: Traverse] = implicitly[Traverse[F]] }
 }

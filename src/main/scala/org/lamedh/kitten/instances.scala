@@ -2,9 +2,9 @@ package org.lamedh
 package kitten
 
 import scale._
-import scale.list._
 import categories.reducers._
 import categories.mappers._
+import org.lamedh.kitten.categories.kernel
 
 package object instances {
 
@@ -34,7 +34,7 @@ package object instances {
         }
 
       override def foldRight[A, B](fa: Lis[A], init: B)(f: (A, B) => B): B =
-        foldLeft(reverse(fa), init)(f)
+        foldLeft(Lis.reverse(fa), init)(f)
     }
   }
 
@@ -57,11 +57,19 @@ package object instances {
     }
   }
 
-  object applies {
+  object applicatives {
 
     import functors._
+    import kernel.Id
 
-    implicit val mayApply: Apply[Opt] = new Apply[Opt] {
+    implicit val idApplicative: Applicative[Id] = new Applicative[Id] {
+      override def pure[A](a: A): Id[A]                        = a
+      override def map[A, B](fa: Id[A])(f: A => B): Id[B]      = f(fa)
+      override def ap[A, B](fab: Id[A => B])(fa: Id[A]): Id[B] = fab(fa)
+    }
+
+    implicit val optApply: Applicative[Opt] = new Applicative[Opt] {
+      override def pure[A](a: A): Opt[A] = Som(a)
       override def map[A, B](fa: Opt[A])(f: A => B): Opt[B] =
         mayFunctor.map(fa)(f)
       override def ap[A, B](fab: Opt[A => B])(fa: Opt[A]): Opt[B] =
@@ -71,17 +79,19 @@ package object instances {
         }
     }
 
-    implicit val as: Apply[Lis] = new Apply[Lis] {
+    implicit val lisApply: Applicative[Lis] = new Applicative[Lis] {
+      override def pure[A](a: A): Lis[A] = Cons(a, Nil)
       override def map[A, B](fa: Lis[A])(f: A => B): Lis[B] =
         listFunctor.map(fa)(f)
       override def ap[A, B](fab: Lis[A => B])(fa: Lis[A]): Lis[B] =
         fab match {
           case Nil         => Nil
-          case Cons(f, fs) => union(map(fa)(f), ap(fs)(fa))
+          case Cons(f, fs) => Lis.union(map(fa)(f), ap(fs)(fa))
         }
     }
 
-    implicit val okoApply: Apply[ResString] = new Apply[ResString] {
+    implicit val resApply: Applicative[ResString] = new Applicative[ResString] {
+      override def pure[A](a: A): ResString[A] = Ok(a)
       override def map[A, B](fa: ResString[A])(f: A => B): ResString[B] =
         fa match {
           case Ko(s) => Ko(s)
@@ -91,7 +101,7 @@ package object instances {
       /** {{{
        * ap(Ok(_ + 1))(Ok(5)) == Ok(6)
        * ap(Ko("damn"))(Ok(5)) == Ko("damn")
-       * ap(Ko("damn"))(Ko("you")) == Ko("damnyou")
+       * ap(Ko("damn"))(Ko("you")) == Ko("damn, you")
        * }}}
        */
       override def ap[A, B](
@@ -99,10 +109,9 @@ package object instances {
       )(fa: ResString[A]): ResString[B] =
         (fab, fa) match {
           case (Ok(f), Ok(a))       => Ok(f(a))
-          case (Ko(err1), Ko(err2)) => Ko(err1 + err2)
+          case (Ko(err1), Ko(err2)) => Ko(err1 + ", " + err2)
           case (_, Ko(err))         => Ko(err)
           case (Ko(err), _)         => Ko(err)
-          case _                    => ??? // unreachable
         }
     }
   }
@@ -135,6 +144,21 @@ package object instances {
       override def pure[A](a: A): Fut[A] = Fut.done(a)
       override def flatMap[A, B](fa: Fut[A])(f: A => Fut[B]): Fut[B] =
         fa.flatMap(f)
+    }
+  }
+
+  object traversables {
+
+    implicit val listTraverse: Traverse[Lis] = new Traverse[Lis] {
+
+      def traverse[G[_]: Applicative, A, B](fa: Lis[A])(
+          f: A => G[B]): G[Lis[B]] = {
+        import instances.reducers.listFoldable
+        import syntaxes._
+        fa.foldRight(Applicative[G].pure(Nil: Lis[B])) { (a, acc) =>
+          Applicative[G].mapN(f(a), acc)((a, b) => Cons(a, b))
+        }
+      }
     }
   }
 }
