@@ -3,7 +3,7 @@
 Kitten is a simplified, educational re-creation of the Cats functional programming library for Scala,
 aiming to provide a hands-on learning experience for understanding core concepts like:
 
-- Categories implemented in type classes**: `Functor`, `Applicative`, `Monad`.
+- **Categories implemented in type classes**: `Functor`, `Applicative`, `Monad`.
 - **Data types**: `Option`, `Either`, `Future`.
 - **Functional programming patterns**: Mapping, flat-mapping, error handling, asynchronous computations.
 
