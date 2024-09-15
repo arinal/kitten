@@ -1,5 +1,4 @@
-package org
-package lamedh
+package org.lamedh
 package kitten
 
 import scale._

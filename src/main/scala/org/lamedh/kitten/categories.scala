@@ -1,7 +1,4 @@
-package org
-package lamedh
-package kitten
-package categories
+package org.lamedh.kitten.categories
 
 package object kernel {
   type Id[A] = A
