@@ -1,47 +1,76 @@
-package org
-package lamedh
-package scale
+package org.lamedh.scale
 
-object concurrent {
+import java.util.concurrent.Semaphore
 
-  import java.util.concurrent.Semaphore
-  import scale._
+/**
+ * Represents `Future` from stdlib
+ * Example:
+ * {{{
+ * val fut = Fut { Thread.sleep(1000); 5 }
+ * val fut2 = fut.map(_ + 1)
+ * val fut3 = fut.map(_ + 2)
+ * val n6 = fut2.get() // this will block and return 6
+ * val n7 = fut3.get() // this won't block anymore, returns 7
+ * }}}
+ **/
+trait Fut[A] {
 
   /**
-   * Represents `Future` from stdlib
-   * Example:
+   * Non-blocking way to access the wrapped value, and transform it over function
+   * @param f function to transform the value
+   * @return new instance of `Fut[B]` with transformed value
+   **/
+  def map[B](f: A => B): Fut[B]
+
+  def flatMap[B](f: A => Fut[B]): Fut[B]
+
+  def onComplete(f: A => Unit): Unit
+  def run(): Unit
+
+  /**
+   * Gets the value forcefully. This operation blocks the current thread.
+   * @return the wrapped value
+   **/
+  def get(): A
+}
+
+object Fut {
+
+  def done[A](a: A): Fut[A] = Done(a)
+
+  /**
+   * Compute `a` in different thread. Similar to `Future.apply`
+   * @param  a an expression that will be evaluated in a threadpool
+   **/
+  def apply[A](a: => A): Fut[A] = new Spawning(a)
+
+  /**
+   * Wrap any kind of `Future`-like operation
+   * Example for wrapping [[scala.concurrent.Future]]
    * {{{
-   * val fut = Fut { Thread.sleep(1000); 5 }
-   * val fut2 = fut.map(_ + 1)
-   * val fut3 = fut.map(_ + 2)
-   * val n6 = fut2.get() // this will block and return 6
-   * val n7 = fut3.get() // this won't block anymore, returns 7
+   * val future: Future[String] = downloadPageAsync("http://wikipedia.com")
+   * val promise = Fut.promise[String]
+   * future.onComplete {
+   *   case Success(html) => promise.success(html)
+   * }
+   *
+   * val htmll = promise
+   *   .map(html => "Downloaded page:\n" + html)
+   *   .fetch()
    * }}}
-    **/
-  trait Fut[A] {
+   **/
+  def promise[A]: Promis[A] = new Promis[A]
 
-    /**
-     * Non-blocking way to access the wrapped value, and transform it over function
-     * @param f function to transform the value
-     * @return new instance of `Fut[B]` with transformed value
-    **/
-    def map[B](f: A => B): Fut[B]
-
-    def flatMap[B](f: A => Fut[B]): Fut[B]
-
-    def onComplete(f: A => Unit): Unit
-    def run(): Unit
-
-    /**
-     * Gets the value forcefully. This operation blocks the current thread.
-     * @return the wrapped value
-    **/
-    def get(): A
+  def traverse[A, B](futs: List[Fut[A]]): Fut[List[A]] = {
+    val initial = Fut.done(List.empty[A])
+    futs.foldRight(initial) { (fut, acc) =>
+      fut.flatMap(a => acc.map(as => a :: as))
+    }
   }
 
   /**
    * Mimicks `Future.successful`, wrap over a materialized value
-  **/
+   **/
   case class Done[A](a: A) extends Fut[A] {
     def map[B](f: A => B): Fut[B]          = new Done(f(a))
     def flatMap[B](f: A => Fut[B]): Fut[B] = f(a)
@@ -53,7 +82,7 @@ object concurrent {
 
   /**
    * Put a computation `action` to a thread pool
-  **/
+   **/
   class Spawning[A](action: => A) extends Fut[A] {
 
     private val executionCtx = scala.concurrent.ExecutionContext.global
@@ -79,7 +108,7 @@ object concurrent {
      * {{{
      * val result = fut.flatMap { a => fut2.map { b => a + b } }
      * }}}
-     */
+     **/
     override def flatMap[B](f: A => Fut[B]): Fut[B] = {
       val promise = new Promis[B]
       executionCtx.execute(() => {
@@ -113,7 +142,7 @@ object concurrent {
 
   /**
    * Wrap an async operation from another type
-  **/
+   **/
   class Promis[A] {
     private var result: Option[A]           = None
     private var callback: Option[A => Unit] = None
@@ -137,33 +166,5 @@ object concurrent {
           result.get
         }
       }
-  }
-
-  object Fut {
-
-    def done[A](a: A): Fut[A] = Done(a)
-
-    /**
-     * Compute `a` in different thread. Equivalence of `Future.apply`
-     * @param  a an expression that will be evaluated in a threadpool
-    **/
-    def apply[A](a: => A): Fut[A] = new Spawning(a)
-
-    /**
-     * Wrap any kind of `Future`-like operation
-     * Example for wrapping [[scala.concurrent.Future]]
-     * {{{
-     * val future: Future[String] = downloadPageAsync("http://wikipedia.com")
-     * val promise = Fut.promise[String]
-     * future.onComplete {
-     *   case Success(html) => promise.success(html)
-     * }
-     *
-     * val htmll = promise
-     *   .map(html => "Downloaded page:\n" + html)
-     *   .fetch()
-     * }}}
-    **/
-    def promise[A]: Promis[A] = new Promis[A]
   }
 }

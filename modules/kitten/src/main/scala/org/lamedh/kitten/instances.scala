@@ -118,7 +118,7 @@ package object instances {
 
   object monads {
 
-    import org.lamedh.scale.concurrent.Fut
+    import org.lamedh.scale.Fut
     import functors._
 
     implicit val mayMonad: Monad[Opt] = new Monad[Opt] {

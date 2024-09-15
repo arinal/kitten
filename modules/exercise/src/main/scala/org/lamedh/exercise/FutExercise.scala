@@ -1,8 +1,8 @@
 package org.lamedh
 
-import scale.concurrent.Fut
+import scale.Fut
 
-object FutExercises {
+object FutExercise {
 
   def printThread(exercise: Int) =
     println(s"ex$exercise: ${Thread.currentThread().getName()}")

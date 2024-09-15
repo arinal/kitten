@@ -345,7 +345,7 @@ object KittenExercise {
     import kitten.instances.traversables._
     import kitten.instances.monads._
     import kitten.categories.mappers._
-    import org.lamedh.scale.concurrent.Fut
+    import org.lamedh.scale.Fut
 
     val futs: Lis[Fut[Int]] = Lis(Fut.done(1), Fut.done(2))
     val listOfFut           = Traverse[Lis].traverse(futs)(a => a.map(_ + 1))
