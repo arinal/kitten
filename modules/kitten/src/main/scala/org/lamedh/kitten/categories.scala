@@ -2,7 +2,9 @@ package org.lamedh.kitten
 package categories
 
 package object kernel {
+
   type Id[A] = A
+
   def id[A](a: A): Id[A] = a
 }
 
@@ -47,7 +49,7 @@ package object reducers {
     def foldRight[A, B](fa: F[A], init: B)(f: (A, B) => B): B
 
     /**
-     * Like foldLeft, but combining the mapped `B` values is provided by `Monoid[B]`
+     * Map each element with `f`, then fold left using `Monoid`.
      * @return accumulated value `B`
     **/
     def foldMap[A, B](fa: F[A])(f: A => B)(implicit B: Monoid[B]): B =
@@ -83,7 +85,7 @@ package object mappers {
   }
 
   /**
-   * Has a real name of Covariant Functor, but people forget its first name.
+   * Has a real name of covariant functor, but people forget its first name.
    * Unlike `contramap`, `map` is one of the most popular method in the world.
   **/
   trait Functor[F[_]] extends Invariant[F] {
@@ -97,8 +99,8 @@ package object mappers {
   /**
    * [[Apply]] combines one or more effects together.
    * {{{
-   * Apply[OkoString].product(Ok(1), Ok(2), Ok(3)) // Ok((1, 2, 3))
-   * Apply[OkoString].product(Ok(1), Ko("a"), Ko("b")) // Ko("ab")
+   * Apply[ResString].product(Ok(1), Ok(2), Ok(3)) // Ok((1, 2, 3))
+   * Apply[ResString].product(Ok(1), Ko("a"), Ko("b")) // Ko("ab")
    * }}}
   **/
   trait Apply[F[_]] extends Functor[F] {
@@ -122,15 +124,14 @@ package object mappers {
     def pure[A](a: A): F[A]
   }
 
-  /**
-   * The star of this show, we present you the one and only.. **drumrolls** `Monad`
-  **/
   trait Monad[F[_]] extends Applicative[F] {
     def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
 
-    // Monad is unfriendly and greedy, it overwrites everything in flatMap
+    // Monad reimplement every method in terms of `flatMap`.
+    // Since `ap` is implemented in `flatMap`, it lost its applicative property and become monadic.
     override def ap[A, B](ff: F[A => B])(fa: F[A]): F[B] =
       flatMap(ff)(f => map(fa)(f))
+
     override def map[A, B](fa: F[A])(f: A => B): F[B] =
       flatMap(fa)(a => pure(f(a)))
   }
@@ -138,7 +139,8 @@ package object mappers {
   trait Traverse[F[_]] extends Functor[F] {
     def traverse[G[_]: Applicative, A, B](fa: F[A])(f: A => G[B]): G[F[B]]
 
-    def sequence[G[_]: Applicative, A](fga: F[G[A]]): G[F[A]] = traverse(fga)(identity)
+    def sequence[G[_]: Applicative, A](fga: F[G[A]]): G[F[A]] =
+      traverse(fga)(identity)
 
     override def map[A, B](fa: F[kernel.Id[A]])(f: A => B): F[B] = {
       import instances.applicatives.idApplicative
