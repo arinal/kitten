@@ -3,7 +3,7 @@ package org.lamedh
 import kitten.categories.reducers.Monoid
 import scale._
 
-object Exercises {
+object KittenExercise {
 
   trait TimeUnit
   case object Seconds extends TimeUnit
