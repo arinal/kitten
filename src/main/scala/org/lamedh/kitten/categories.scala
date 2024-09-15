@@ -74,9 +74,9 @@ package object mappers {
   }
 
   /**
-   * Has a full name of ,ontravariant functor. Unfortunatelly the name 'functor' always refers
+   * Has a full name of contravariant functor. Unfortunatelly the name 'functor' always refers
    * to its sibling, covariant functor.
-   * Apparently `contramap` has a weird signature and doesn't go well in the market.
+   * Apparently `contramap` method has a weird signature and doesn't go well in the market.
   **/
   trait Contravariant[F[_]] extends Invariant[F] {
     def contramap[A, B](fa: F[A])(f: B => A): F[B]
@@ -84,7 +84,8 @@ package object mappers {
   }
 
   /**
-   * Has a real name of Covariant Functor, but people forget its first name
+   * Has a real name of Covariant Functor, but people forget its first name.
+   * Unlike `contramap`, `map` is one of the most popular method in the world.
   **/
   trait Functor[F[_]] extends Invariant[F] {
     def map[A, B](fa: F[A])(f: A => B): F[B]
@@ -123,7 +124,7 @@ package object mappers {
   trait Monad[F[_]] extends Applicative[F] {
     def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
 
-    // Monad is not a friendly category, it needs to redefine everything in flatMap
+    // Monad is unfriendly and greedy, it overwrites everything in flatMap
     override def ap[A, B](ff: F[A => B])(fa: F[A]): F[B] = flatMap(ff)(f => map(fa)(f))
     override def map[A, B](fa: F[A])(f: A => B): F[B]    = flatMap(fa)(a => pure(f(a)))
   }

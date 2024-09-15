@@ -2,55 +2,55 @@ package org
 package lamedh
 package kitten
 
-import implosi._
-import implosi.list._
+import scale._
+import scale.list._
 import categories.reducers._
 import categories.mappers._
 
 package object instances {
 
-  type OkoString[A] = Oko[String, A]
+  type ResString[A] = Res[String, A]
 
   object reducers {
 
     import functors._
 
-    implicit val stringMonoid = new Monoid[String] {
+    implicit val stringMonoid: Monoid[String] = new Monoid[String] {
       override def add(a1: String, a2: String): String = a1 + a2
       override def empty: String                       = ""
     }
 
-    implicit val intGroup = new Group[Int] {
+    implicit val intGroup: Group[Int] = new Group[Int] {
       override def add(a1: Int, a2: Int): Int = a1 + a2
       override def inverse(a: Int): Int       = -a
       override def empty: Int                 = 0
     }
 
-    implicit val listFoldable = new Foldable[As] {
+    implicit val listFoldable: Foldable[Lis] = new Foldable[Lis] {
 
-      override def foldLeft[A, B](fa: As[A], init: B)(f: (A, B) => B): B =
+      override def foldLeft[A, B](fa: Lis[A], init: B)(f: (A, B) => B): B =
         fa match {
           case Cons(a, as) => foldLeft(as, f(a, init))(f)
           case Nil         => init
         }
 
-      override def foldRight[A, B](fa: As[A], init: B)(f: (A, B) => B): B =
+      override def foldRight[A, B](fa: Lis[A], init: B)(f: (A, B) => B): B =
         foldLeft(reverse(fa), init)(f)
     }
   }
 
   object functors {
 
-    implicit val maybeFunctor = new Functor[Ono] {
-      override def map[A, B](fa: Ono[A])(f: A => B): Ono[B] =
+    implicit val mayFunctor: Functor[Opt] = new Functor[Opt] {
+      override def map[A, B](fa: Opt[A])(f: A => B): Opt[B] =
         fa match {
-          case No    => No
-          case On(a) => On(f(a))
+          case Non    => Non
+          case Som(a) => Som(f(a))
         }
     }
 
-    implicit lazy val listFunctor = new Functor[As] {
-      override def map[A, B](fa: As[A])(f: A => B): As[B] =
+    implicit lazy val listFunctor: Functor[Lis] = new Functor[Lis] {
+      override def map[A, B](fa: Lis[A])(f: A => B): Lis[B] =
         fa match {
           case Cons(h, t) => Cons(f(h), map(t)(f))
           case Nil        => Nil
@@ -62,39 +62,42 @@ package object instances {
 
     import functors._
 
-    implicit val onoApply = new Apply[Ono] {
-      override def map[A, B](fa: Ono[A])(f: A => B): Ono[B] = maybeFunctor.map(fa)(f)
-      override def ap[A, B](fab: Ono[A => B])(fa: Ono[A]): Ono[B] =
+    implicit val mayApply: Apply[Opt] = new Apply[Opt] {
+      override def map[A, B](fa: Opt[A])(f: A => B): Opt[B] =
+        mayFunctor.map(fa)(f)
+      override def ap[A, B](fab: Opt[A => B])(fa: Opt[A]): Opt[B] =
         fab match {
-          case No    => No
-          case On(f) => map(fa)(f)
+          case Non    => Non
+          case Som(f) => map(fa)(f)
         }
     }
 
-    implicit val as = new Apply[As] {
-      override def map[A, B](fa: As[A])(f: A => B): As[B] = listFunctor.map(fa)(f)
-      override def ap[A, B](fab: As[A => B])(fa: As[A]): As[B] =
+    implicit val as: Apply[Lis] = new Apply[Lis] {
+      override def map[A, B](fa: Lis[A])(f: A => B): Lis[B] =
+        listFunctor.map(fa)(f)
+      override def ap[A, B](fab: Lis[A => B])(fa: Lis[A]): Lis[B] =
         fab match {
           case Nil         => Nil
           case Cons(f, fs) => union(map(fa)(f), ap(fs)(fa))
         }
     }
 
-    implicit val okoApply = new Apply[OkoString] {
-      override def map[A, B](fa: OkoString[A])(f: A => B): OkoString[B] =
+    implicit val okoApply: Apply[ResString] = new Apply[ResString] {
+      override def map[A, B](fa: ResString[A])(f: A => B): ResString[B] =
         fa match {
           case Ko(s) => Ko(s)
           case Ok(a) => Ok(f(a))
         }
 
-      /**
-       * {{{
+      /** {{{
        * ap(Ok(_ + 1))(Ok(5)) == Ok(6)
        * ap(Ko("damn"))(Ok(5)) == Ko("damn")
        * ap(Ko("damn"))(Ko("you")) == Ko("damnyou")
        * }}}
-      **/
-      override def ap[A, B](fab: OkoString[A => B])(fa: OkoString[A]): OkoString[B] =
+       */
+      override def ap[A, B](
+          fab: ResString[A => B]
+      )(fa: ResString[A]): ResString[B] =
         (fab, fa) match {
           case (Ok(f), Ok(a))       => Ok(f(a))
           case (Ko(err1), Ko(err2)) => Ko(err1 + err2)
@@ -107,38 +110,32 @@ package object instances {
 
   object monads {
 
-    import org.lamedh.implosi.concurrent.Yet
-    import org.lamedh.implosi.concurrent.YetNot
+    import org.lamedh.scale.concurrent.Fut
     import functors._
 
-    implicit val onoMonad = new Monad[Ono] {
-      override def pure[A](a: A): Ono[A] = On(a)
-      override def flatMap[A, B](fa: Ono[A])(f: A => Ono[B]): Ono[B] =
+    implicit val mayMonad: Monad[Opt] = new Monad[Opt] {
+      override def pure[A](a: A): Opt[A] = Som(a)
+      override def flatMap[A, B](fa: Opt[A])(f: A => Opt[B]): Opt[B] =
         fa match {
-          case No    => No
-          case On(a) => f(a)
+          case Som(a) => f(a)
+          case Non    => Non
         }
     }
 
-    implicit val okoMonad = new Monad[OkoString] {
-      override def pure[A](a: A): OkoString[A] = Ok(a)
-      override def flatMap[A, B](fa: OkoString[A])(f: A => OkoString[B]): OkoString[B] =
+    implicit val resMonad: Monad[ResString] = new Monad[ResString] {
+      override def pure[A](a: A): ResString[A] = Ok(a)
+      override def flatMap[A, B](fa: ResString[A])(
+          f: A => ResString[B]): ResString[B] =
         fa match {
-          case Ko(s) => Ko(s)
           case Ok(a) => f(a)
+          case Ko(s) => Ko(s)
         }
     }
 
-    implicit val yetNotMonad = new Monad[YetNot] {
-      override def pure[A](a: A): YetNot[A] = new Yet(a)
-      override def flatMap[A, B](fa: YetNot[A])(f: A => YetNot[B]): YetNot[B] = {
-        fa.map { a =>
-          f(a).fetch() match {
-            case Ok(a)   => a
-            case Ko(err) => throw err
-          }
-        }
-      }
+    implicit val futMonad: Monad[Fut] = new Monad[Fut] {
+      override def pure[A](a: A): Fut[A] = Fut.done(a)
+      override def flatMap[A, B](fa: Fut[A])(f: A => Fut[B]): Fut[B] =
+        fa.flatMap(f)
     }
   }
 }
